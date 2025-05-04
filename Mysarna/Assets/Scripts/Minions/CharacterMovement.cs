@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.AI;
 
+[RequireComponent(typeof(NavMeshAgent))]
 public class CharacterMovement : MonoBehaviour
 {
     [Header("Movement Settings")]
@@ -7,40 +9,34 @@ public class CharacterMovement : MonoBehaviour
     public float stoppingDistance = 0.1f;
     public float rotationSpeed = 10f;
 
-    private Vector3 targetPosition;
+    private NavMeshAgent agent;
     private bool isMoving = false;
+
+    void Start()
+    {
+        agent = GetComponent<NavMeshAgent>();
+        if (agent != null)
+        {
+            agent.speed = moveSpeed;
+            agent.stoppingDistance = stoppingDistance;
+            agent.angularSpeed = rotationSpeed * 100f; // Convert to degrees per second
+        }
+    }
 
     void Update()
     {
-        if (isMoving)
+        if (agent != null && agent.isActiveAndEnabled)
         {
-            // Calculate direction to target
-            Vector3 direction = targetPosition - transform.position;
-            direction.y = 0; // Keep movement on the XZ plane
-
-            // Check if we've reached the target
-            if (direction.magnitude <= stoppingDistance)
-            {
-                isMoving = false;
-                return;
-            }
-
-            // Rotate towards target
-            if (direction != Vector3.zero)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-            }
-
-            // Move towards target
-            transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+            isMoving = agent.velocity.magnitude > 0.1f;
         }
     }
 
     public void MoveTo(Vector3 position)
     {
-        targetPosition = position;
-        targetPosition.y = transform.position.y; // Keep the same Y position
-        isMoving = true;
+        if (agent != null && agent.isActiveAndEnabled)
+        {
+            agent.SetDestination(position);
+            isMoving = true;
+        }
     }
 } 
