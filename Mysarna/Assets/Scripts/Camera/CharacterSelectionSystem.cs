@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class CharacterSelectionSystem : MonoBehaviour
 {
@@ -6,85 +7,94 @@ public class CharacterSelectionSystem : MonoBehaviour
     public Color highlightColor = Color.yellow;
     public float highlightIntensity = 1.5f;
 
-    private GameObject selectedCharacter;
+    [Header("Tag Settings")]
+    public List<string> highlightableTags = new List<string>();
+    public List<string> clickableTags = new List<string>();
+
+    private List<GameObject> selectedObjects = new List<GameObject>();
     private Camera mainCamera;
-    private Material originalMaterial;
+    private Dictionary<GameObject, Material> originalMaterials = new Dictionary<GameObject, Material>();
+    private Material highlightMaterial;
 
     void Start()
     {
         mainCamera = Camera.main;
+        // Create a single highlight material instance
+        highlightMaterial = new Material(Shader.Find("Standard"));
+        highlightMaterial.color = highlightColor;
+        highlightMaterial.EnableKeyword("_EMISSION");
+        highlightMaterial.SetColor("_EmissionColor", highlightColor * highlightIntensity);
     }
 
     void Update()
     {
-        // Left click to select character
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
-                // Check if we clicked on a character (has ClickableObject script)
-                ClickableObject clickable = hit.collider.GetComponent<ClickableObject>();
-                if (clickable != null)
-                {
-                    // Deselect previous character if any
-                    if (selectedCharacter != null)
-                    {
-                        RemoveHighlight(selectedCharacter);
-                    }
+                string tag = hit.collider.gameObject.tag;
+                bool isHighlightable = highlightableTags.Contains(tag);
+                bool isClickable = clickableTags.Contains(tag);
+                bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                GameObject clickedObject = hit.collider.gameObject;
 
-                    // Select new character
-                    selectedCharacter = hit.collider.gameObject;
-                    Debug.Log($"Selected character: {selectedCharacter.name}");
-                    
-                    // Add highlight to new selection
-                    AddHighlight(selectedCharacter);
+                if (!isHighlightable && !isClickable)
+                {
+                    DeselectAll();
+                    return;
                 }
-            }
-        }
 
-        // Right click to move selected character
-        if (Input.GetMouseButtonDown(1) && selectedCharacter != null)
-        {
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                // Check if we clicked on the ground (has a collider)
-                if (hit.collider.gameObject.CompareTag("Ground"))
+                if (!shiftHeld)
                 {
-                    // Get the character's movement component
-                    CharacterMovement movement = selectedCharacter.GetComponent<CharacterMovement>();
-                    if (movement != null)
+                    DeselectAll();
+                }
+
+                if (!selectedObjects.Contains(clickedObject))
+                {
+                    selectedObjects.Add(clickedObject);
+                    if (isHighlightable)
                     {
-                        movement.MoveTo(hit.point);
-                        Debug.Log($"Moving {selectedCharacter.name} to {hit.point}");
+                        AddHighlight(clickedObject);
                     }
+                    // If just clickable, do nothing extra for now
                 }
             }
         }
     }
 
-    private void AddHighlight(GameObject character)
+    private void AddHighlight(GameObject obj)
     {
-        Renderer renderer = character.GetComponent<Renderer>();
+        Renderer renderer = obj.GetComponent<Renderer>();
         if (renderer != null)
         {
-            originalMaterial = renderer.material;
-            
-            // Create highlight material
-            Material highlightMaterial = new Material(originalMaterial);
-            highlightMaterial.color = highlightColor;
-            highlightMaterial.SetColor("_EmissionColor", highlightColor * highlightIntensity);
+            if (!originalMaterials.ContainsKey(obj) && renderer.material != highlightMaterial)
+            {
+                originalMaterials[obj] = renderer.material;
+            }
             renderer.material = highlightMaterial;
         }
     }
 
-    private void RemoveHighlight(GameObject character)
+    private void RemoveHighlight(GameObject obj)
     {
-        Renderer renderer = character.GetComponent<Renderer>();
-        if (renderer != null)
+        Renderer renderer = obj.GetComponent<Renderer>();
+        if (renderer != null && originalMaterials.ContainsKey(obj))
         {
-            renderer.material = originalMaterial;
+            renderer.material = originalMaterials[obj];
+            originalMaterials.Remove(obj);
         }
+    }
+
+    private void DeselectAll()
+    {
+        foreach (var obj in new List<GameObject>(selectedObjects))
+        {
+            if (highlightableTags.Contains(obj.tag))
+            {
+                RemoveHighlight(obj);
+            }
+        }
+        selectedObjects.Clear();
     }
 } 
