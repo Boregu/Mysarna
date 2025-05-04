@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class CameraOrbitWithMovement : MonoBehaviour
 {
@@ -11,76 +10,55 @@ public class CameraOrbitWithMovement : MonoBehaviour
     public float minDistance = 2f;
     public float maxDistance = 50f;
 
+    [Header("Keybinds")]
+    public KeyCode moveUpKey = KeyCode.Space;
+    public KeyCode moveDownKey = KeyCode.LeftShift;
+    public KeyCode rotateKey = KeyCode.Mouse1; // Right mouse button
+
     private float yaw = 0f;
     private float pitch = 20f;
     private float distance = 10f;
 
-    private PlayerControls controls;
-    private Vector2 moveInput;
-    private float verticalInput;
-    private Vector2 lookInput;
-    private float zoomInput;
-
-    private bool rotating = false;
-
-    private void Awake()
-    {
-        controls = new PlayerControls();
-
-        controls.Camera.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
-        controls.Camera.Move.canceled += _ => moveInput = Vector2.zero;
-
-        controls.Camera.VerticalMove.performed += ctx => verticalInput = ctx.ReadValue<float>();
-        controls.Camera.VerticalMove.canceled += _ => verticalInput = 0f;
-
-        controls.Camera.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
-        controls.Camera.Look.canceled += _ => lookInput = Vector2.zero;
-
-        controls.Camera.Zoom.performed += ctx => zoomInput = ctx.ReadValue<float>();
-        controls.Camera.Zoom.canceled += _ => zoomInput = 0f;
-    }
-
-    private void OnEnable() => controls.Enable();
-    private void OnDisable() => controls.Disable();
-
     void Update()
     {
-        if (Mouse.current.rightButton.isPressed)
-        {
-            rotating = true;
-            HandleRotation();
-        }
-        else
-        {
-            rotating = false;
-        }
-
         HandleMovement();
+        HandleRotation();
         HandleZoom();
         UpdateCameraPosition();
     }
 
     void HandleMovement()
     {
+        float h = Input.GetAxis("Horizontal"); // A/D
+        float v = Input.GetAxis("Vertical");   // W/S
+
+        // Flattened movement directions
         Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
         Vector3 flatRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
 
-        Vector3 move = (flatRight * moveInput.x + flatForward * moveInput.y) * moveSpeed;
-        Vector3 vertical = Vector3.up * verticalInput * verticalSpeed;
+        Vector3 move = (flatRight * h + flatForward * v) * moveSpeed;
 
-        pivot += (move + vertical) * Time.deltaTime;
+        float vertical = 0f;
+        if (Input.GetKey(moveUpKey)) vertical += 1f;
+        if (Input.GetKey(moveDownKey)) vertical -= 1f;
+
+        pivot += (move + Vector3.up * vertical * verticalSpeed) * Time.deltaTime;
     }
 
     void HandleRotation()
     {
-        yaw += lookInput.x * rotationSpeed * Time.deltaTime;
-        pitch -= lookInput.y * rotationSpeed * Time.deltaTime;
-        pitch = Mathf.Clamp(pitch, -89f, 89f);
+        if (Input.GetKey(rotateKey))
+        {
+            yaw += Input.GetAxis("Mouse X") * rotationSpeed;
+            pitch -= Input.GetAxis("Mouse Y") * rotationSpeed;
+            pitch = Mathf.Clamp(pitch, -89f, 89f);
+        }
     }
 
     void HandleZoom()
     {
-        distance -= zoomInput * scrollSpeed;
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        distance -= scroll * scrollSpeed;
         distance = Mathf.Clamp(distance, minDistance, maxDistance);
     }
 
