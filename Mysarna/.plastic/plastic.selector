@@ -1,0 +1,4 @@
+repository "Mysarna@Bore@cloud"
+  path "/"
+    br "/main"
+    co "/main"
