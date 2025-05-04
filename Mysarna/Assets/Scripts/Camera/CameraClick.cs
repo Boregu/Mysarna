@@ -1,20 +1,26 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class CameraClicker : MonoBehaviour
 {
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0)) // Left-click
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                GameObject clickedObject = hit.collider.gameObject;
-                Debug.Log("Clicked on: " + clickedObject.name);
+    private PlayerControls controls;
 
-                // Call a method on the clicked object (if it has one)
-                clickedObject.SendMessage("OnClicked", SendMessageOptions.DontRequireReceiver);
-            }
+    private void Awake()
+    {
+        controls = new PlayerControls();
+        controls.Camera.Click.performed += ctx => TryClick();
+    }
+
+    private void OnEnable() => controls.Enable();
+    private void OnDisable() => controls.Disable();
+
+    private void TryClick()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+            GameObject clickedObject = hit.collider.gameObject;
+            clickedObject.SendMessage("OnClicked", SendMessageOptions.DontRequireReceiver);
         }
     }
 }
