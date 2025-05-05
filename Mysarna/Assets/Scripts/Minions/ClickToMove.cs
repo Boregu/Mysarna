@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.AI;
 
 public class ClickToMove : MonoBehaviour {
+    public GameObject moveIndicatorPrefab; // Assign a prefab with MoveIndicator, or instantiate via script
+
     void Update() {
         if (Input.GetMouseButtonDown(1)) { // Right mouse button
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -16,6 +18,11 @@ public class ClickToMove : MonoBehaviour {
                         NavMeshAgent agent = obj.GetComponent<NavMeshAgent>();
                         if (agent != null) {
                             agent.SetDestination(hit.point);
+                            // Add move indicator
+                            GameObject indicatorObj = new GameObject("MoveIndicator");
+                            var indicator = indicatorObj.AddComponent<MoveIndicator>();
+                            indicator.unit = obj.transform;
+                            indicator.destination = hit.point;
                         }
                     }
                 }

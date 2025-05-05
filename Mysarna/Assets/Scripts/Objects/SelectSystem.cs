@@ -126,7 +126,7 @@ public class SelectSystem : MonoBehaviour
         {
             if (!obj.activeInHierarchy) continue;
             if (!selectableTags.Contains(obj.tag)) continue;
-            var renderer = obj.GetComponent<Renderer>();
+            var renderer = obj.GetComponentInChildren<Renderer>();
             if (renderer == null) continue;
             Vector3 screenPos = Camera.main.WorldToScreenPoint(obj.transform.position);
             screenPos.y = Screen.height - screenPos.y; // invert y for GUI
